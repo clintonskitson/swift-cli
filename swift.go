@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"github.com/emccode/swift"
+	"github.com/ncw/swift"
 	"github.com/spf13/cobra"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -257,11 +260,21 @@ func connect() *swift.Connection {
 		AuthUrl: os.Getenv("ST_AUTH"),
 	}
 
+	if os.Getenv("ST_X509") == "embedded" {
+		var pool *x509.CertPool
+		pool = x509.NewCertPool()
+		pool.AppendCertsFromPEM(pemCerts)
+		c.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: pool},
+		}
+	}
+
 	// Authenticate
 	err := c.Authenticate()
 	if err != nil {
 		fmt.Println("Ensure ST_USER, ST_KEY, and ST_AUTH are set")
 		panic(err)
 	}
+
 	return &c
 }
